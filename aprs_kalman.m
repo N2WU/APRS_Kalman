@@ -13,7 +13,7 @@ alt_data = alt_data/1e3; %convert to kft
 vel_data = table2array(datacsv(:,"speed"));
 time_data = table2array(datacsv(:,"lasttime"));
 % plot(alt_data) % this actually doesn't need much sanitization
-data_cutoff = 10; %how many to use as training data
+data_cutoff = 51; %how many to use as training data
 alt_train = alt_data(1:data_cutoff);
 alt_est = alt_data(1+data_cutoff:end);
 time_train = time_data(1:data_cutoff);
@@ -26,23 +26,41 @@ for k=1:length(time_diff)
     time_diff(k) = second(time_train(k)) -second(time_train(k+1));
 end
 T = mean(time_diff);
-A = [1 T; 0 1]; B = [T^2/2 T]; H = [1 0];
+A = [1 T; 0 1]; B = [T^2/2 T];
 var_alt = var(alt_train);
-
-n = 1;
-x(n) = time_est(n);
-yv(n) = yv(n-1)+ya(n-1)*T;
-yp(n) = yp(n-1) + yv(n-1)*T + 1/2*ya(n-1)*T^2;
-eta(n) = ya(n-1);
-y(n) = [yp(n); yv(n)];
-
 %% Predict and Format
-% use hw7
-for n=1:1e3
-    y_est(n) = A*y_est(n-1);
-    Ry(n) = A*Ry(n-1)*A' + B*Rn*B'
-    
-    K(n) = Ry(n)*H'*inv(Rw(n))
-    y_est(n) = y_est(n)+K(n)*(x(n)-x_est(n))
-    Ry = (I)
+
+% Generate vector process y(n)
+N = 50;
+% Generate the observation process x(n)
+g1 = 0.25;
+xn = alt_train;
+x_std = std(xn);
+% Design KF parameters
+H = [1 0]; G = 0.25;
+Rv = 0.25^2; R_eta = eye(1);
+% Initialization
+y_post = [0;1]; R_post = zeros(2);
+IRv = eye(size(Rv)); IR = eye(size(R_post));
+y_hat = zeros(N+1,1); gain = zeros(N+1,2); mse = y_hat;
+% Tracking
+for n = 0:N
+R_pri = A*R_post*A' + B*R_eta*B';
+y_pri = A*y_post;
+x_pri = H*y_pri;
+Rw = H*R_pri*H'+Rv;
+K = R_pri*H'*(Rw\IRv);
+y_post = y_pri + K*(xn(n+1) - x_pri);
+R_post = (IR-K*H)*R_pri;
+y_hat(n+1) = y_post(2);
+gain(n+1,:) = K';
+mse(n+1) = R_post(1,1);
 end
+y_hat = [y_hat(2:N+1);y_hat(N+1)];
+
+n = 0:N; figure;
+plot(n,xn,':',n,y_hat,'g--','linewidth',1);
+ylabel('Amplitude'); xlabel('Index n');
+legend('x(n)','yhat(n)'); axis([0,N,0,max(xn)+10]);
+set(gca,'xtick',(0:20:N),'ytick',(0:5:max(xn)+10)); grid;
+title('Estimation of Altitude Using Kalman Filter');
