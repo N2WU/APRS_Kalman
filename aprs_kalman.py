@@ -39,11 +39,11 @@ for n in range(0,N):
     y_pri = A @ y_post
     x_pri = H @ y_pri
     # Update
-    Rw = H @R_pri @ H.T + Rv
+    Rw = H @ R_pri @ H.T + Rv
     K = R_pri @ H.T @ np.linalg.inv(Rw)
-    y_post = y_pri + K @ (xn[n+1]-x_pri)
+    y_post = y_pri + K @ (xn[n]-x_pri)
     R_post = (IR-K @ H) @ R_pri
-    y_hat[n+1] = y_post[1]
+    y_hat[n] = y_post[1]
 
 #y_hat = [y_hat[1:-1],y_hat[-1]]
 # xn = xn[0:-2]
@@ -54,7 +54,7 @@ nx = np.append(0,n)
 nx = nx[0:-1]
 # plot steps, -> xn and y_hat
 fig, ax = plt.subplots()  # Create a figure containing a single axes.
-meas_alt = ax.plot(nx[0], xn[0], label='Measured Altitude', color='blue', marker=".",linewidth=2, linestyle='--')[0]  # Plot some data on the axes.
+meas_alt = ax.plot(nx[0], xn[0], label='Measured Altitude', color='blue', marker=".",linewidth=2, linestyle='-')[0]  # Plot some data on the axes.
 est_alt = ax.plot(n[0],y_hat[0], label='Estimated Altitude', color='orange', marker=".",linestyle=':')[0]
 ax.set(xlim=[0, N+1], ylim=[0, np.max(xn)], xlabel='Measurement Step', ylabel='Altitude (km)')
 ax.set_title('1D Altitude Kalman Filter')
@@ -70,7 +70,7 @@ def update(frame):
     return (meas_alt, est_alt)
 
 
-ani = animation.FuncAnimation(fig=fig, func=update, frames=N+1, interval=750)
+ani = animation.FuncAnimation(fig=fig, func=update, frames=N+1, interval=500)
 #ani.to_html5_video(64e3)
 ani.save('Kalman1D.mp4')
 plt.show()
